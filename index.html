@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>url-shortener-telegram:@c35333</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>url-shortener 短网址生成器</h1>
+    <input type="text" id="long-url" placeholder="输入长链接">
+    <button onclick="shortenUrl()">生成短链接</button>
+    <div class="result" id="output"></div>
+
+    <script>
+        const GITHUB_OWNER = "icu777"; // 替换为你的 GitHub 用户名
+        const GITHUB_REPO = "url-shortener";         // 替换为你的仓库名称
+        const GITHUB_TOKEN = "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";    // 替换为你的 GitHub Token
+
+        // 生成短链接
+        async function shortenUrl() {
+            const longUrl = document.getElementById("long-url").value;
+            const output = document.getElementById("output");
+
+            if (!longUrl) {
+                output.innerHTML = "<p>请输入有效的长链接！</p>";
+                return;
+            }
+
+            const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues`;
+            const headers = {
+                "Authorization": `Bearer ${GITHUB_TOKEN}`,
+                "Accept": "application/vnd.github.v3+json",
+                "Content-Type": "application/json"
+            };
+
+            // Issue 标题用短码表示，内容存储长链接
+            const shortCode = Math.random().toString(36).substring(2, 8); // 随机生成6位短码
+            const data = {
+                title: shortCode,
+                body: longUrl
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`GitHub API 错误: ${response.status}`);
+                }
+
+                const issue = await response.json();
+                const shortUrl = `https://${GITHUB_OWNER}.github.io/${GITHUB_REPO}/?id=${shortCode}`;
+                output.innerHTML = `<p>短链接：<a href="${shortUrl}" target="_blank">${shortUrl}</a></p>`;
+            } catch (error) {
+                output.innerHTML = `<p>生成短链接时出错：${error.message}</p>`;
+            }
+        }
+
+        // 解析短链接
+        async function resolveUrl(shortCode) {
+            const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?state=all`;
+            const headers = {
+                "Authorization": `Bearer ${GITHUB_TOKEN}`,
+                "Accept": "application/vnd.github.v3+json"
+            };
+
+            try {
+                const response = await fetch(apiUrl, { headers });
+                if (!response.ok) {
+                    throw new Error(`GitHub API 错误: ${response.status}`);
+                }
+
+                const issues = await response.json();
+                const issue = issues.find(issue => issue.title === shortCode);
+
+                if (issue) {
+                    window.location.href = issue.body; // 跳转到原始链接
+                } else {
+                    document.body.innerHTML = "<p>短链接未找到！</p>";
+                }
+            } catch (error) {
+                document.body.innerHTML = `<p>解析短链接时出错：${error.message}</p>`;
+            }
+        }
+
+        // 如果有短码参数，则解析
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get("id");
+        if (id) resolveUrl(id);
+    </script>
+</body>
+</html>
